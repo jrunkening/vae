@@ -32,7 +32,7 @@ class Trainer(torch.nn.Module):
         self,
         params: torch.nn.Parameter | List[torch.nn.Parameter],
         dataset: Dataset,
-        lr: float = 1e-4, n_epoch: int = 500, size_batch: int = 4,
+        lr: float = 5e-5, n_epoch: int = 500, size_batch: int = 4,
         verbose: bool = False, verbose_image: bool = False, path_image: Optional[Path] = None,
         path_params: Optional[List[Path]] = None, save_on_every_k_iter: int = 0,
     ):
