@@ -4,12 +4,13 @@ import torch
 class ResBlock(torch.nn.Module):
     def __init__(self, n_dims_channel_in: int, n_dims_channel_out: int, activate: torch.nn.Module, label: str) -> None:
         super().__init__()
-        self.skip = torch.nn.Conv2d(n_dims_channel_in, n_dims_channel_out, kernel_size=1)
+        self.Conv = torch.nn.Conv2d if label == "down" else torch.nn.ConvTranspose2d
+        self.skip = self.Conv(n_dims_channel_in, n_dims_channel_out, kernel_size=1)
         self.cnn = torch.nn.Sequential(
-            torch.nn.Conv2d(n_dims_channel_in, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
+            self.Conv(n_dims_channel_in, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
             torch.nn.BatchNorm2d(n_dims_channel_out),
             activate,
-            torch.nn.Conv2d(n_dims_channel_in, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
+            self.Conv(n_dims_channel_in, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
             torch.nn.BatchNorm2d(n_dims_channel_out),
         )
         self.pool = torch.nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2)) if label == "down" else torch.nn.ConvTranspose2d(n_dims_channel_out, n_dims_channel_out, kernel_size=(2, 2), stride=(2, 2))
@@ -73,7 +74,7 @@ class VAE(torch.nn.Module):
         super().__init__()
 
         self.activate = torch.nn.GELU()
-        self.n_layers = 10
+        self.n_layers = 8
         self.n_dims_hidden = 32
 
         self.lift = torch.nn.Linear(3, self.n_dims_hidden)

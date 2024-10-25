@@ -90,7 +90,7 @@ if __name__ == "__main__":
     root_result = Path(__file__).parent.parent.joinpath("result")
     root_result.mkdir(parents=True, exist_ok=True)
 
-    dataset = CelebAHQ(root_params_celebahq)
+    dataset = CelebAHQ(root_params_celebahq, height=256, width=256)
 
     name_model = "vae"
 
