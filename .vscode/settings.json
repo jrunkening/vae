@@ -2,7 +2,10 @@
     "cSpell.words": [
         "celebahq",
         "dtype",
+        "figsize",
         "GELU",
+        "hspace",
+        "imshow",
         "msssim",
         "optim",
         "randn",
@@ -13,6 +16,7 @@
         "trange",
         "Unflatten",
         "Unpool",
-        "Upsampling"
+        "Upsampling",
+        "wspace"
     ]
 }

@@ -91,7 +91,7 @@ class VAE(torch.nn.Module):
         images = self.lift(images).permute(0, 3, 1, 2) # (#batch, n_dims_hidden, height, width)
 
         means, log_stds = self.encoder(images)
-        params = (torch.exp(log_stds) * torch.randn_like(means) + means).clamp(-4, 4)
+        params = (torch.exp(log_stds) * torch.randn_like(means) + means)
         images = self.decoder(params).permute(0, 2, 3, 1) # (#batch, height, width, 3)
 
         images = self.project(images)
