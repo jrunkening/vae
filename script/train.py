@@ -32,7 +32,7 @@ class Trainer(torch.nn.Module):
         self,
         params: torch.nn.Parameter | List[torch.nn.Parameter],
         dataset: Dataset,
-        lr: float = 5e-5, n_epoch: int = 500, size_batch: int = 4,
+        lr: float = 1e-4, n_epoch: int = 500, size_batch: int = 4,
         verbose: bool = False, verbose_image: bool = False, path_image: Optional[Path] = None,
         path_params: Optional[List[Path]] = None, save_on_every_k_iter: int = 0,
     ):
@@ -48,7 +48,7 @@ class Trainer(torch.nn.Module):
 
                 images_predicted, means, log_stds = self.model.forward(images_gt)
 
-                loss_colors = torch.nn.functional.l1_loss(images_predicted, images_gt)
+                loss_colors = (images_predicted - images_gt).square().sum(dim=-1).sqrt().mean()
                 loss_ssim = (1 - ssim(images_predicted.permute(0, 3, 1, 2), images_gt.permute(0, 3, 1, 2), size_average=False, nonnegative_ssim=True).mean())/2
                 loss_reconstruction = sum([
                     loss_colors,
