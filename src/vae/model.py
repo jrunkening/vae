@@ -8,10 +8,14 @@ class ResBlock(torch.nn.Module):
         self.skip = self.Conv(n_dims_channel_in, n_dims_channel_out, kernel_size=1)
         self.cnn = torch.nn.Sequential(
             self.Conv(n_dims_channel_in, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
-            torch.nn.BatchNorm2d(n_dims_channel_out),
+            # torch.nn.BatchNorm2d(n_dims_channel_out),
+            self.Conv(n_dims_channel_out, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
+            self.Conv(n_dims_channel_out, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
             activate,
             self.Conv(n_dims_channel_in, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
-            torch.nn.BatchNorm2d(n_dims_channel_out),
+            # torch.nn.BatchNorm2d(n_dims_channel_out),
+            self.Conv(n_dims_channel_out, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
+            self.Conv(n_dims_channel_out, n_dims_channel_out, kernel_size=3, padding=1, stride=1),
         )
         self.pool = torch.nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2)) if label == "down" else torch.nn.ConvTranspose2d(n_dims_channel_out, n_dims_channel_out, kernel_size=(2, 2), stride=(2, 2))
 
