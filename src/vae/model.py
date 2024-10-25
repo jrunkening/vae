@@ -19,85 +19,80 @@ class ResBlock(torch.nn.Module):
 
 
 class Encoder(torch.nn.Module):
-    def __init__(self, height: int, width: int, n_params: int):
+    def __init__(self, n_layers: int, n_dims_hidden: int, n_params: int, activate: torch.nn.Module):
         super().__init__()
 
-        self.activate = torch.nn.ReLU()
+        self.activate = activate
+        self.n_dims_hidden = n_dims_hidden
 
-        self.lift = torch.nn.Linear(3, 64)
-
-        self.n_layers = 6
+        self.n_layers = n_layers
         for i in range(self.n_layers):
-            setattr(self, f"kernel{i}", ResBlock(64, 64, self.activate, "down"))
-
-        self.project = torch.nn.Sequential(
-            torch.nn.Linear(64, 512),
-            self.activate,
-            torch.nn.Linear(512, 3)
-        )
+            setattr(self, f"kernel{i}", ResBlock(self.n_dims_hidden, self.n_dims_hidden, self.activate, "down"))
 
         self.estimator_mean = torch.nn.Sequential(
             torch.nn.Flatten(),
-            torch.nn.Linear(16*16*3, n_params)
+            torch.nn.Linear(self.n_dims_hidden, n_params)
         )
         self.estimator_log_std = torch.nn.Sequential(
             torch.nn.Flatten(),
-            torch.nn.Linear(16*16*3, n_params)
+            torch.nn.Linear(self.n_dims_hidden, n_params)
         )
 
-    def forward(self, vertices: torch.Tensor):
-        vertices = self.lift(vertices).permute(0, 3, 1, 2)
-
+    def forward(self, images: torch.Tensor):
         for i in range(self.n_layers):
-            vertices = self.activate(getattr(self, f"kernel{i}")(vertices))
+            images = self.activate(getattr(self, f"kernel{i}")(images))
+        return self.estimator_mean(images), self.estimator_log_std(images)
 
-        vertices = self.project(vertices.permute(0, 2, 3, 1))
-        return self.estimator_mean(vertices), self.estimator_log_std(vertices)
 
 
 class Decoder(torch.nn.Module):
-    def __init__(self, height: int, width: int, n_params: int):
+    def __init__(self, n_layers: int, n_dims_hidden: int, n_params: int, activate: torch.nn.Module):
         super().__init__()
 
-        self.height = height
-        self.width = width
-        self.n_layers = 6
+        self.activate = activate
+        self.n_dims_hidden = n_dims_hidden
 
-        self.activate = torch.nn.ReLU()
-
-        self.estimator_inv = torch.nn.Linear(n_params, 16*16*3)
-
-        self.project_inv = torch.nn.Sequential(
-            torch.nn.Linear(3, 512),
-            self.activate,
-            torch.nn.Linear(512, 64),
+        self.estimator_inv = torch.nn.Sequential(
+            torch.nn.Linear(n_params, self.n_dims_hidden),
+            torch.nn.Unflatten(1, (self.n_dims_hidden, 1, 1))
         )
 
+        self.n_layers = n_layers
         for i in range(self.n_layers):
-            setattr(self, f"kernel{i}", ResBlock(64, 64, self.activate, "up"))
-
-        self.lift_inv = torch.nn.Linear(64, 3)
-
+            setattr(self, f"kernel{i}", ResBlock(self.n_dims_hidden, self.n_dims_hidden, self.activate, "up"))
 
     def forward(self, params: torch.Tensor):
-        vertices = self.estimator_inv(params).reshape(params.shape[0], 16, 16, -1)
-        vertices = self.project_inv(vertices).permute(0, 3, 1, 2)
-
+        images = self.estimator_inv(params)
         for i in range(self.n_layers):
-            vertices = self.activate(getattr(self, f"kernel{i}")(vertices))
-
-        vertices = self.lift_inv(vertices.permute(0, 2, 3, 1))
-        return vertices
+            images = self.activate(getattr(self, f"kernel{i}")(images))
+        return images
 
 
 class VAE(torch.nn.Module):
-    def __init__(self, height: int, width: int, n_params: int) -> None:
+    def __init__(self, n_params: int) -> None:
         super().__init__()
-        self.encoder = Encoder(height, width, n_params)
-        self.decoder = Decoder(height, width, n_params)
 
-    def forward(self, xs: torch.Tensor):
-        means, log_stds = self.encoder(xs)
-        params = torch.exp(log_stds) * torch.randn_like(means) + means
-        xs = self.decoder(params)
-        return xs, means, log_stds
+        self.activate = torch.nn.GELU()
+        self.n_layers = 10
+        self.n_dims_hidden = 32
+
+        self.lift = torch.nn.Linear(3, self.n_dims_hidden)
+
+        self.encoder = Encoder(self.n_layers, self.n_dims_hidden, n_params, self.activate)
+        self.decoder = Decoder(self.n_layers, self.n_dims_hidden, n_params, self.activate)
+
+        self.project = torch.nn.Sequential(
+            torch.nn.Linear(self.n_dims_hidden, 64),
+            self.activate,
+            torch.nn.Linear(64, 3)
+        )
+
+    def forward(self, images: torch.Tensor):
+        images = self.lift(images).permute(0, 3, 1, 2) # (#batch, n_dims_hidden, height, width)
+
+        means, log_stds = self.encoder(images)
+        params = (torch.exp(log_stds) * torch.randn_like(means) + means).clamp(-4, 4)
+        images = self.decoder(params).permute(0, 2, 3, 1) # (#batch, height, width, 3)
+
+        images = self.project(images)
+        return images, means, log_stds

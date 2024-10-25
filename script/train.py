@@ -99,7 +99,7 @@ if __name__ == "__main__":
         model = torch.load(root_result.joinpath(f"{name_model}.pt"), weights_only=False).to(dtype).to(device)
     else:
         print(f"train from scratch!!!")
-        model = VAE(dataset.height, dataset.width, 300).to(dtype).to(device)
+        model = VAE(64).to(dtype).to(device)
 
     trainer = Trainer(model, dtype=dtype, device=device)
 

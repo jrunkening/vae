@@ -11,6 +11,7 @@
         "torchvision",
         "tqdm",
         "trange",
+        "Unflatten",
         "Unpool",
         "Upsampling"
     ]
